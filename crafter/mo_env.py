@@ -1,10 +1,13 @@
 import numpy as np
-from typing import Any, Union
+from typing import Any, Optional
+import gymnasium as gym
+from gymnasium import spaces
 
 from . import constants
 from . import objects
 from . import worldgen
 from . import env
+
 
 def compute_reward(prev_achivements: dict[Any, int], current_achievements: dict[Any, int], player: objects.Player, last_health: int, ep_player_pos: list[tuple[int, int]], prev_unlocked: set[str]) -> np.ndarray:
     """
@@ -54,20 +57,30 @@ def compute_reward(prev_achivements: dict[Any, int], current_achievements: dict[
     return reward
 
 
-class MOEnv(env.Env):
+
+class MOEnv(env.Env, gym.Env):
 
   def __init__(
       self, area=(64, 64), view=(9, 9), size=(64, 64),
-      reward=True, length=10000, seed=None, linearization_weights=None):
-    
+      reward=True, length=10000, seed=None, render_mode='rgb_array') -> gym.Env:
+
     """
     Multi-objective version of the Crafter environment.
     """
     super().__init__(area=area, view=view, size=size, reward=reward, length=length, seed=seed)
-    self._linearization_weights = linearization_weights
     self._ep_player_pos = None
 
-  def reset(self):
+    self.reward_space = spaces.Box(
+        low=-np.inf * np.ones(6, dtype=np.float32),
+        high=np.inf * np.ones(6, dtype=np.float32),
+        dtype=np.float32)
+    
+    self.metadata = {"render_modes": ["rgb_array"], "render_fps": 4}
+    self.render_mode = render_mode
+    self.window = None
+    self.clock = None
+
+  def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
     center = (self._world.area[0] // 2, self._world.area[1] // 2)
     self._episode += 1
     self._step = 0
@@ -83,7 +96,7 @@ class MOEnv(env.Env):
     self._ep_player_pos = []
     self._ep_player_pos.append(self._player.pos)
 
-    return self._obs()
+    return self._obs(), {}
 
   def step(self, action):
     self._step += 1
@@ -106,7 +119,7 @@ class MOEnv(env.Env):
     obs = self._obs()
 
     # Compute MO reward
-    mo_reward = compute_reward(
+    reward = compute_reward(
         prev_achivements=prev_achivements,
         current_achievements=self._player.achievements,
         player=self._player,
@@ -114,12 +127,6 @@ class MOEnv(env.Env):
         ep_player_pos=self._ep_player_pos,
         prev_unlocked=self._unlocked
     )
-
-    # If linearization weights are provided, compute the linearized reward
-    if self._linearization_weights is not None:
-      reward = np.dot(mo_reward, self._linearization_weights)
-    else:
-      reward = mo_reward
 
     # Update player position, health and unlocked achievements
     self._ep_player_pos.append(self._player.pos)
@@ -143,7 +150,6 @@ class MOEnv(env.Env):
         'discount': 1 - float(dead),
         'semantic': self._sem_view(),
         'player_pos': self._player.pos,
-        'mo_reward': mo_reward,
         'reward': reward,
     }
 

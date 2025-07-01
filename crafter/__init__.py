@@ -1,9 +1,10 @@
 from .env import Env
 from .mo_env import MOEnv
 from .recorder import Recorder
+from .wrappers import LinearReward
 
 try:
-  import gym
+  import gymnasium as gym
   gym.register(
       id='CrafterReward-v1',
       entry_point='crafter:Env',
@@ -21,3 +22,4 @@ try:
       kwargs={'reward': True})
 except ImportError:
   pass
+

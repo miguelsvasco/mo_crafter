@@ -27,7 +27,7 @@ def main():
   parser.add_argument('--death', type=str, default='reset', choices=[
       'continue', 'reset', 'quit'])
   parser.add_argument('--goal', type=str, default='explore', choices=[
-      'mo', 'diamond', 'explore', 'kill enemies', 'eat cow', 'eat plant',])
+      'mo', 'achievements', 'explore', 'kill enemies', 'eat cow', 'eat plant',])
   args = parser.parse_args()
 
   keymap = {
@@ -64,7 +64,7 @@ def main():
   # Define the linearization weights for multi-objective optimization
   if args.goal == 'mo':
     linearization_weights = None
-  elif args.goal == 'diamond':
+  elif args.goal == 'achievements':
     linearization_weights = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
   elif args.goal == 'explore':
     linearization_weights = [0.0, 1.0, 1.0, 0.0, 0.0, 0.0]
